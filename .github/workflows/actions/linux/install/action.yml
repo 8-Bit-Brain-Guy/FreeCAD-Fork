@@ -28,6 +28,10 @@ inputs:
   builddir:
     description: "Directory where build is stored"
     required: true
+  installPrefix:
+    description: "Optional install destination; empty uses the configured system prefix"
+    required: false
+    default: ""
   logFile:
     description: "Path for log file"
     required: true
@@ -47,9 +51,16 @@ runs:
     - name: Install
       id: install
       shell: bash -l {0}
+      env:
+        INSTALL_PREFIX: ${{ inputs.installPrefix }}
       run: |
         set -o pipefail
-        (stdbuf -oL -eL sudo cmake --install ${{ inputs.builddir }} ${{ inputs.extraParameters }}) \
+        if [ -n "$INSTALL_PREFIX" ]; then
+          install_command=(cmake --install "${{ inputs.builddir }}" --prefix "$INSTALL_PREFIX" ${{ inputs.extraParameters }})
+        else
+          install_command=(sudo cmake --install "${{ inputs.builddir }}" ${{ inputs.extraParameters }})
+        fi
+        (stdbuf -oL -eL "${install_command[@]}") \
         2> >(tee -a ${{ inputs.errorFile }}) | tee -a ${{ inputs.logFile }}
     - name: Write report
       shell: bash -l {0}

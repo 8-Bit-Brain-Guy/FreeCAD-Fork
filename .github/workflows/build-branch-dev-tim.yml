@@ -1,0 +1,16 @@
+name: Build branch dev Tim
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and test FreeCAD on Ubuntu 24.04
+    uses: ./.github/workflows/sub_buildUbuntu.yml
+    with:
+      artifactBasename: Dev-Ubuntu-${{ github.run_id }}
+      runTests: false
+      installPrefix: ${{ github.workspace }}/FreeCAD-install

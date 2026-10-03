@@ -40,6 +40,16 @@ on:
         default: true
         type: boolean
         required: false
+      runTests:
+        description: "Run automated tests after building"
+        default: true
+        type: boolean
+        required: false
+      installPrefix:
+        description: "Optional staging directory for an installable artifact"
+        default: ""
+        type: string
+        required: false
       allowedToFail:
         default: false
         type: boolean
@@ -164,7 +174,7 @@ jobs:
           ccache -s
 
       - name: FreeCAD CLI tests on build dir
-        if: inputs.testOnBuildDir
+        if: inputs.runTests && inputs.testOnBuildDir
         timeout-minutes: 10
         uses: ./.github/workflows/actions/runPythonTests
         with:
@@ -174,7 +184,7 @@ jobs:
           reportFile: ${{env.reportdir}}${{ env.reportfilename }}
 
       - name: FreeCAD GUI tests on build dir
-        if: inputs.testOnBuildDir
+        if: inputs.runTests && inputs.testOnBuildDir
         timeout-minutes: 15
         uses: ./.github/workflows/actions/runPythonTests
         with:
@@ -185,7 +195,7 @@ jobs:
           reportFile: ${{env.reportdir}}${{ env.reportfilename }}
 
       - name: Coin node snapshot visual tests on build dir
-        if: inputs.testCoinNodeSnapshots
+        if: inputs.runTests && inputs.testCoinNodeSnapshots
         timeout-minutes: 15
         uses: ./.github/workflows/actions/runPythonTests
         with:
@@ -198,13 +208,14 @@ jobs:
           reportFile: ${{env.reportdir}}${{ env.reportfilename }}
 
       - name: Upload Coin node snapshot artifacts (on failure)
-        if: failure() && inputs.testCoinNodeSnapshots
+        if: failure() && inputs.runTests && inputs.testCoinNodeSnapshots
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ inputs.artifactBasename }}-CoinNodeSnapshots
           path: /tmp/FreeCADTesting/CoinNodeSnapshots
 
       - name: C++ tests
+        if: inputs.runTests
         timeout-minutes: 1
         uses: ./.github/workflows/actions/runCPPTests/runAllTests
         with:
@@ -216,11 +227,21 @@ jobs:
         uses: ./.github/workflows/actions/linux/install
         with:
           builddir: ${{ env.builddir }}
+          installPrefix: ${{ inputs.installPrefix }}
           logFile: ${{ env.logdir }}Install.log
           errorFile: ${{ env.logdir }}InstallErrors.log
           reportFile: ${{env.reportdir}}${{ env.reportfilename }}
 
+      - name: Upload installable FreeCAD artifact
+        if: inputs.installPrefix != ''
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: FreeCAD-Ubuntu-${{ github.run_id }}
+          path: ${{ inputs.installPrefix }}
+          if-no-files-found: error
+
       - name: FreeCAD CLI tests on install
+        if: inputs.runTests
         timeout-minutes: 10
         uses: ./.github/workflows/actions/runPythonTests
         with:
@@ -230,6 +251,7 @@ jobs:
           reportFile: ${{env.reportdir}}${{ env.reportfilename }}
 
       - name: FreeCAD GUI tests on install
+        if: inputs.runTests
         timeout-minutes: 15
         uses: ./.github/workflows/actions/runPythonTests
         with:
